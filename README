@@ -1,0 +1,72 @@
+NAME
+    YAML::Object
+
+VERSION
+    0.01
+
+SYNOPSIS
+        ### create object
+        my $cfg = YAML::Object->LOAD('path/to/my.yaml');
+
+        ### merge path/to/another/file.yaml with existing config-file
+        $cfg->LOAD('path/to/another/file.yaml');
+
+NOTES
+    The YAML-document cannot have a key named "LOAD", since it will
+    interfere with the "LOAD()" method.
+
+METHODS
+  "LOAD"
+    As class-method: Object constructor. Takes one argument, which is the
+    config-filename. This argument is passed on to "LOAD()";
+
+    As object-method: Loads a file and merges it to %$self. Meaning that you
+    can call "LOAD" as many times you want. The last loaded YAML-file will
+    override any existing params, if there are duplicates.
+
+  %{} or @{}
+    The object is overloaded to return a hash or array.
+
+  ""
+    The object returns "HASH" or "ARRAY" in string content
+
+  "Everything else"
+    All other methods returns either:
+
+    YAML::Object object
+        ...a YAML::Object object, if the config-element points on a hash.
+
+        This object is overloaded by %{}.
+
+    YAML::Object::Array object
+        ...a YAML::Object::Array object, if the config-element points on an
+        array.
+
+        This object is overloaded by @{}.
+
+    scalar
+        ...a scalar if that's what it points at.
+
+AUTHOR
+    Jan Henning Thorsen, "<pm at flodhest.net>"
+
+BUGS
+    Please report any bugs or feature requests to "bug-pm at flodhest.net",
+    or through the web interface at <http://trac.flodhest.net/pm>. I will be
+    notified, and then you'll automatically be notified of progress on your
+    bug as I make changes.
+
+SUPPORT
+    You can find documentation for this module with the perldoc command.
+
+        perldoc YAML::Object
+
+    You can also look for information at: <http://trac.flodhest.net/pm>
+
+ACKNOWLEDGEMENTS
+COPYRIGHT & LICENSE
+    Copyright 2007 Jan Henning Thorsen, all rights reserved.
+
+    This program is free software; you can redistribute it and/or modify it
+    under the same terms as Perl itself.
+

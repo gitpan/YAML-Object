@@ -1,0 +1,9 @@
+---
+abstract: Access YAML data
+author: Jan Henning Thorsen
+version: 0.01
+distribution_type: module
+license: perl
+name: YAML-Object
+requires:
+  YAML: 0
