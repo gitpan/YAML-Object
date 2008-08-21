@@ -1,12 +1,20 @@
 
 foo:
+    a: 0a0a0a0a
+    b: 0b0b0b0b
+    c: 0c0c0c0c
+    d: 0d0d0d0d
 
     ### this is a comment
-    bar1:
-        - bah1
-        - bah2
-        - bah3
+    arr_ref:
+       - element 0
+       - element 1
+       - element 2
+       - element 3
+       -
+           a: 1
+           b: 2
 
     --- this is another comment
-    bar2: hello world
+    hello_world: HELLO WORLD!
 

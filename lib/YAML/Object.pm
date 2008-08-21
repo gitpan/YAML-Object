@@ -1,27 +1,4 @@
 
-#===========================
-package YAML::Object::Array;
-#===========================
-
-use warnings;
-use strict;
-use overload(
-    '@{}'    => sub { shift->{'array'} },
-    fallback => 1,
-);
-
-sub ___get___key { #==========================================================
-
-    my $self = shift;
-    my $name = $self->{'key'};
-
-    if($self->{'parent'}) {
-        $name = join "->", $self->{'parent'}->___get___key, $name;
-    }
-
-    return $name;
-}
-
 #====================
 package YAML::Object;
 #====================
@@ -29,201 +6,182 @@ package YAML::Object;
 use warnings;
 use strict;
 use YAML;
-use constant OBJECT => 0;
-use constant PARENT => 1;
-use constant KEY    => 2;
-use overload(
-    '%{}'    => sub { shift->[OBJECT] },
-    '${}'    => sub { shift->[OBJECT] },
-    '""'     => sub { shift->[OBJECT] },
+use overload (
+    q(%{})   => sub {
+        my $data = &{ $_[0] };
+        return $data->[0] if(UNIVERSAL::isa($data->[0], "HASH"));
+        return {};
+    },
+    q(@{})   => sub {
+        my $data = &{ $_[0] };
+        return $data->[0] if(UNIVERSAL::isa($data->[0], "ARRAY"));
+        return [];
+    }, 
+    q(${})   => sub { return $_[0]->()->[0] },
+    q("")    => sub { return $_[0]->()->[0] },
     fallback => 1,
 );
 
-our $VERSION = '0.01';
-our $AUTOLOAD;
+our $VERSION = '0.03';
+our($AUTOLOAD, $yaml_object, $yaml_ok, $get_key);
 
+$yaml_ok = sub { #============================================================
+    return 0 if(/^\s*\-{3}/);
+    return 0 if(/^\s*#/);
+    return 0 if(/^\s*$/);
+    return 1;
+};
 
-sub LOAD { #==================================================================
+$yaml_object = sub { #========================================================
+    my $in   = shift;
+    my $data = [undef, undef, q()];
+    my $yaml = q();
+    my $fh;
 
-    my $self = shift;
-    my $file = shift;
-    my $yaml = "";
+    unless(defined $in) {
+        return sub { $data };
+    }
+    elsif(ref $in eq 'GLOB') {
+        $fh = $in;
+    }
+    elsif(ref $in eq 'HASH') {
+        $data->[0] = $in;
+    }
+    elsif($in !~ /\n/ and -r $in) {
+        open($fh, "<", $in) or die "Could not read yaml-file ($in): $!\n";
+    }
+    else {
+        $yaml = $in;
+    }
 
-    ### constructor
-    $self = bless [{}, undef, ''], $self unless(ref $self);
-
-    ### open
-    if($file and -r $file) {
-        open(my $fh, "<", $file) or die "Could not read YAML: $!";
-
-        LINE:
-        while(my $line = readline $fh) {
-            next LINE if($line =~ /^\s*\-{3}/);
-            next LINE if($line =~ /^\s*#/);
-            next LINE if($line =~ /^\s*$/);
-            $yaml .= $line;
-        }
-        close $fh;
-
-        ### load config
-        if(my $config = Load($yaml)) {
-            $self->[OBJECT]{$_} = $config->{$_} for(keys %$config);
+    if($fh) {
+        local $_;
+        while($_ = readline $fh) {
+            $yaml_ok->() and $yaml .= $_;
         }
     }
 
-    ### return object
-    return $self;
-}
-
-sub ___get___key { #==========================================================
-
-    my $self = shift;
-    my $name = $self->[KEY];
-
-    if($self->[PARENT]) {
-        $name = join "->", $self->[PARENT]->___get___key, $name;
+    if($yaml) {
+        $data->[0] = Load($yaml);
     }
 
-    return $name;
-}
+    return bless sub { $data };
+};
+
+$get_key = sub { #============================================================
+    my $self = shift;
+    my $data = $self->();
+
+    if($data->[1]) {
+        return join q(->), $get_key->($data->[1]), $data->[2];
+    }
+    else {
+        return q();
+    }
+};
 
 sub AUTOLOAD { #==============================================================
-
     my $self = shift;
-    my $set  = shift;
+    my $data = &$self->[0];
+    my($key) = $AUTOLOAD =~ /::(\w+)$/mx;
+    my $next = [undef, $self, $key];
 
-    return if($AUTOLOAD =~ /::DESTROY$/);
-
-    if($AUTOLOAD =~ /::(\w+)$/mx) {
-        my $key = $1;
-        my $sub;
-
-        ### cannot get node-data on undef parent node
-        unless(defined $self->[OBJECT]) {
-            my $name = $self->___get___key ."->$key";
-            die "YAML::Object: $name does not exist\n";
-        }
-
-        ### hash node
-        elsif(ref $self->[OBJECT]{$key} eq 'HASH') {
-            $sub = sub {
-                       bless [
-                          $self->[OBJECT]{$key},
-                          $self,
-                          $key,
-                       ], "YAML::Object";
-                   };
-        }
-
-        ### list node
-        elsif(ref $self->[OBJECT]{$key} eq 'ARRAY') {
-            $sub = sub {
-                       bless {
-                           array  => $self->[OBJECT]{$key},
-                           parent => $self,
-                           key    => $key,
-                       }, "YAML::Object::Array";
-                   };
-        }
-
-        ### scalar node
-        elsif(defined $self->[OBJECT]{$key}) {
-            $sub = sub { $self->[OBJECT]{$key} };
-        }
-
-        ### undef node
-        else {
-            $sub = sub {
-                       bless [
-                          undef,
-                          $self,
-                          $key,
-                       ], "YAML::Object";
-                   };
-        }
-
-        ### add method
-        {
-            no strict 'refs';
-            *{$AUTOLOAD} = $sub;
-        }
-
-        ### return value
-        return $self->$AUTOLOAD;
+    unless(defined $data) {
+        die(sprintf "YAML::Object: %s->%s does not exist\n",
+            $get_key->($self), $key,
+        );
     }
 
-    return;
+    if(ref $data eq 'HASH') {
+        $next->[0] = $data->{$key};
+    }
+    elsif(ref $data eq 'ARRAY') {
+        $key       =~ s/\D//g;
+        $next->[0] =  $data->[$key];
+    }
+
+    return bless sub { $next };
+}
+
+sub import { #================================================================
+    my $parent = caller(0);
+    no strict 'refs';
+    *{"${parent}::yaml_object"} = $yaml_object;
+}
+
+DESTROY { #===================================================================
 }
 
 #=============================================================================
-1983;
+1;
 __END__
 
 =head1 NAME
 
-YAML::Object
+YAML::Object - Use OO to point to a yaml-node
 
 =head1 VERSION
 
-0.01
+0.03
 
 =head1 SYNOPSIS
 
-    ### create object
-    my $cfg = YAML::Object->LOAD('path/to/my.yaml');
+ use YAML::Object; # imports yaml_object()
 
-    ### merge path/to/another/file.yaml with existing config-file
-    $cfg->LOAD('path/to/another/file.yaml');
+ $yo      = yaml_object($path_to_yaml_file);
+ $complex = $yo->foo->bar->_2->a;
 
-=head1 NOTES
+ $tmp1 = $yo->does_not_exist;  # $tmp1 will be a YAML::Object
+ $tmp2 = $tmp1->try_something; # will die() with message:
 
-The YAML-document cannot have a key named "LOAD", since it will interfere
-with the C<LOAD()> method.
+C<YAML::Object: ->does_not_exist->try_something does not exist>
+
+The first will succeed, to enable you to test if C<$tmp1> is undef:
+
+ if(defined $tmp1) { ... }
+
+ $tmp3 = $yo->some_hash; # returns a YAML::Object
+ $tmp3->{'test'};        # will work, returns a "plain value"
+ $tmp3->test;            # same, but will returns a YAML::Object
+
+Both should behave the same way in your code.
+
+ $index = 1;
+ $tmp3  = $yo->some_array; # returns a YAML::Object
+ $tmp3->[$index];          # will work, returns a "plain value"
+ $tmp3->$index;            # same result, but will return a YAML::Object
+ $tmp3->_1;                # same result as above
+
+The above should behave the same way in your code.
+
+=head1 FUNCTIONS
+
+=head2 yaml_object(string)
+
+Object constructor. Takes one argument, which can be either:
+
+ * A path to a valid YAML-file
+ * A filehandle to read YAML data from
+ * A valid string, containing valid YAML
+ * A hash-ref
+
+Returns a C<YAML::Object> object.
 
 =head1 METHODS
 
-=head2 C<LOAD>
+All methods called, will map to an element in the YAML-tree or undef / throw
+error if not.
 
-As class-method:
-Object constructor. Takes one argument, which is the config-filename. This
-argument is passed on to C<LOAD()>;
+=head1 OVERLOADING
 
-As object-method:
-Loads a file and merges it to %$self. Meaning that you can call C<LOAD> as many
-times you want. The last loaded YAML-file will override any existing params,
-if there are duplicates.
+=head2 %{}, @{}, ${}, "", ...
 
-=head2 %{} or @{}
+The object is overloaded to return the datatype you expect. The datatype
+returned is NOT an object, so you cannot continue calling methods on that.
 
-The object is overloaded to return a hash or array.
+=head1 OBJECT STRUCTURE
 
-=head2 ""
-
-The object returns "HASH" or "ARRAY" in string content
-
-=head2 "Everything else"
-
-All other methods returns either:
-
-=over 4
-
-=item YAML::Object object
-
-...a YAML::Object object, if the config-element points on a hash.
-
-This object is overloaded by %{}.
-
-=item YAML::Object::Array object
-
-...a YAML::Object::Array object, if the config-element points on an array.
-
-This object is overloaded by @{}.
-
-=item scalar
-
-...a scalar if that's what it points at.
-
-=back
+ $self = sub {[ data, parent-object, key ]};
 
 =head1 AUTHOR
 
@@ -236,16 +194,6 @@ C<bug-pm at flodhest.net>, or through the web interface at
 L<http://trac.flodhest.net/pm>.
 I will be notified, and then you'll automatically be notified of progress on
 your bug as I make changes.
-
-=head1 SUPPORT
-
-You can find documentation for this module with the perldoc command.
-
-    perldoc YAML::Object
-
-You can also look for information at: L<http://trac.flodhest.net/pm>
-
-=head1 ACKNOWLEDGEMENTS
 
 =head1 COPYRIGHT & LICENSE
 
