@@ -1,5 +1,9 @@
 Revision history for Perl module YAML::Object
 
-0.01 Mon Apr 28 23:40:30 2008
-     - Commited first version of YAML::Object
+0.01  Mon Apr 28 23:40:30 CET 2008
+    - Commited first version of YAML::Object
+
+0.04  Wed Mar 11 20:13:44 CET 2009
+    - Object is overloaded as a symbol, which enables you to do
+      *$obj->{$ref_type}, since ref($obj) is not supported.
 
