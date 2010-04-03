@@ -6,7 +6,7 @@ YAML::Object - Use OO to point to a yaml-node
 
 =head1 VERSION
 
-0.04
+0.0401
 
 =head1 SYNOPSIS
 
@@ -18,7 +18,7 @@ YAML::Object - Use OO to point to a yaml-node
  $tmp1 = $yo->does_not_exist;  # $tmp1 will be a YAML::Object
  $tmp2 = $tmp1->try_something; # will die() with message:
 
-C<YAML::Object: ->does_not_exist->try_something does not exist>
+ YAML::Object: ->does_not_exist->try_something does not exist
 
 The first will succeed, to enable you to test if C<$tmp1> is undef:
 
@@ -43,7 +43,7 @@ The above should behave the same way in your code.
 use warnings;
 use strict;
 use Symbol;
-use YAML;
+use YAML ();
 use overload (
     q(%{}) => sub {
         my $data = $_[0]->()->[0];
@@ -68,7 +68,7 @@ use overload (
     fallback => 1,
 );
 
-our $VERSION = '0.04';
+our $VERSION = '0.0401';
 our($AUTOLOAD, $yaml_object, $get_key);
 
 =head1 EXPORTED FUNCTIONS
@@ -77,10 +77,10 @@ our($AUTOLOAD, $yaml_object, $get_key);
 
 Object constructor. Takes one argument, which can be either:
 
- * A path to a valid YAML-file
  * A filehandle to read YAML data from
- * A valid string, containing valid YAML
- * A hash-ref
+ * A hash- or array-ref
+ * A path to a file containing valid YAML
+ * A string containing valid YAML
 
 Returns a C<YAML::Object> object.
 
@@ -90,32 +90,24 @@ $yaml_object = sub {
     my $in   = shift;
     my $data = [undef, undef, q()];
     my $yaml = q();
-    my $fh;
 
     unless(defined $in) {
-        return sub { $data };
+        die "yaml_object needs defined argument\n";
     }
-    elsif(ref $in eq 'GLOB') {
-        $fh = $in;
+
+    if(ref $in eq 'GLOB') {
+        local $/;
+        local $_;
+        $data->[0] = YAML::Load($_ = <$in>);
     }
-    elsif(ref $in eq 'HASH') {
+    elsif(ref($in) =~ /HASH|ARRAY/) {
         $data->[0] = $in;
     }
     elsif($in !~ /\n/ and -r $in) {
-        open($fh, "<", $in)
-            or die "YAML::Object: Could not read yaml-file ($in): $!\n";
+        $data->[0] = YAML::LoadFile($in);
     }
     else {
-        $yaml = $in;
-    }
-
-    if($fh) {
-        local $_;
-        $yaml .= $_ while(<$fh>);
-    }
-
-    if($yaml) {
-        $data->[0] = Load($yaml);
+        $data->[0] = YAML::Load($in);
     }
 
     return bless sub { $data };
@@ -189,15 +181,13 @@ returned is NOT an object, so you cannot continue calling methods on that.
 
 =head1 AUTHOR
 
-Jan Henning Thorsen, C<< <pm at flodhest.net> >>
+Jan Henning Thorsen, C<< <jhthorsen at cpan.org> >>
 
 =head1 BUGS
 
 Please report any bugs or feature requests to
-C<bug-pm at flodhest.net>, or through the web interface at
-L<http://trac.flodhest.net/pm>.
-I will be notified, and then you'll automatically be notified of progress on
-your bug as I make changes.
+C<bug-yaml-object at rt.cpan.org>. I will be notified, and then you'll
+automatically be notified of progress on your bug as I make changes.
 
 =head1 COPYRIGHT & LICENSE
 

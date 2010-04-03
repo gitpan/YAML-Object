@@ -1,12 +1,13 @@
+#!/usr/bin/perl
 
 use warnings;
 use strict;
-use FindBin;
-use Test::More tests => 14 * 4;
+use lib qq(lib);
+use Test::More tests => 16 * 4;
 use YAML::Object;
 
 my %args = (
-    file       => qq($FindBin::Bin/test.yml),
+    file       => qq(t/test.yml),
     string     => qq(),
     filehandle => \*DATA,
     hash       => undef,
@@ -40,10 +41,13 @@ for my $arg (sort keys %args) {
         "Correct error: $@");
 
     ### hash
+    ok(*{ $cfg->foo }->{'HASH'}, "foo is a hash");
     is(int(keys %{ $cfg->foo }), 6,
         "Correct amount of key/value pairs in ->foo hash");
 
     ### array
+    ok(*{ $cfg->foo->array_element }->{'ARRAY'},
+	"foo->array_element is an array");
     is(ref $cfg->foo->array_element, "YAML::Object",
         "foo->array_element is a YAML::Object");
 

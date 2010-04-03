@@ -1,69 +1,71 @@
 NAME
-    YAML::Object
+    YAML::Object - Use OO to point to a yaml-node
 
 VERSION
-    0.01
+    0.0401
 
 SYNOPSIS
-        ### create object
-        my $cfg = YAML::Object->LOAD('path/to/my.yaml');
+     use YAML::Object; # imports yaml_object()
 
-        ### merge path/to/another/file.yaml with existing config-file
-        $cfg->LOAD('path/to/another/file.yaml');
+     $yo      = yaml_object($path_to_yaml_file);
+     $complex = $yo->foo->bar->_2->a;
 
-NOTES
-    The YAML-document cannot have a key named "LOAD", since it will
-    interfere with the "LOAD()" method.
+     $tmp1 = $yo->does_not_exist;  # $tmp1 will be a YAML::Object
+     $tmp2 = $tmp1->try_something; # will die() with message:
+
+     YAML::Object: ->does_not_exist->try_something does not exist
+
+    The first will succeed, to enable you to test if $tmp1 is undef:
+
+     if(defined $tmp1) { ... }
+
+     $tmp3 = $yo->some_hash; # returns a YAML::Object
+     $tmp3->{'test'};        # will work, returns a "plain value"
+     $tmp3->test;            # same, but will returns a YAML::Object
+
+    Both should behave the same way in your code.
+
+     $index = 1;
+     $tmp3  = $yo->some_array; # returns a YAML::Object
+     $tmp3->[$index];          # will work, returns a "plain value"
+     $tmp3->$index;            # same result, but will return a YAML::Object
+     $tmp3->_1;                # same result as above
+
+    The above should behave the same way in your code.
+
+EXPORTED FUNCTIONS
+  yaml_object(string)
+    Object constructor. Takes one argument, which can be either:
+
+     * A filehandle to read YAML data from
+     * A hash- or array-ref
+     * A path to a file containing valid YAML
+     * A string containing valid YAML
+
+    Returns a "YAML::Object" object.
 
 METHODS
-  "LOAD"
-    As class-method: Object constructor. Takes one argument, which is the
-    config-filename. This argument is passed on to "LOAD()";
+    All methods called, will map to an element in the YAML-tree or undef /
+    throw error if not. With two exceptions: AUTOLOAD and import are in use
+    in this package.
 
-    As object-method: Loads a file and merges it to %$self. Meaning that you
-    can call "LOAD" as many times you want. The last loaded YAML-file will
-    override any existing params, if there are duplicates.
+OVERLOADING
+  %{}, @{}, ${}, "", ...
+    The object is overloaded to return the datatype you expect. The datatype
+    returned is NOT an object, so you cannot continue calling methods on
+    that.
 
-  %{} or @{}
-    The object is overloaded to return a hash or array.
-
-  ""
-    The object returns "HASH" or "ARRAY" in string content
-
-  "Everything else"
-    All other methods returns either:
-
-    YAML::Object object
-        ...a YAML::Object object, if the config-element points on a hash.
-
-        This object is overloaded by %{}.
-
-    YAML::Object::Array object
-        ...a YAML::Object::Array object, if the config-element points on an
-        array.
-
-        This object is overloaded by @{}.
-
-    scalar
-        ...a scalar if that's what it points at.
+OBJECT STRUCTURE
+     $self = sub {[ data, parent-object, key ]};
 
 AUTHOR
-    Jan Henning Thorsen, "<pm at flodhest.net>"
+    Jan Henning Thorsen, "<jhthorsen at cpan.org>"
 
 BUGS
-    Please report any bugs or feature requests to "bug-pm at flodhest.net",
-    or through the web interface at <http://trac.flodhest.net/pm>. I will be
-    notified, and then you'll automatically be notified of progress on your
-    bug as I make changes.
+    Please report any bugs or feature requests to "bug-yaml-object at
+    rt.cpan.org". I will be notified, and then you'll automatically be
+    notified of progress on your bug as I make changes.
 
-SUPPORT
-    You can find documentation for this module with the perldoc command.
-
-        perldoc YAML::Object
-
-    You can also look for information at: <http://trac.flodhest.net/pm>
-
-ACKNOWLEDGEMENTS
 COPYRIGHT & LICENSE
     Copyright 2007 Jan Henning Thorsen, all rights reserved.
 
