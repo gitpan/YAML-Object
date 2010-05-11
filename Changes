@@ -1,5 +1,8 @@
 Revision history for Perl module YAML::Object
 
+0.05     Tue May 11 16:54:18 CEST 2010
+      - Change yaml_config() can take options
+
 0.0401   Sat Apr  3 13:27:57 CEST 2010
       - Update Changes
       - Update repo structure

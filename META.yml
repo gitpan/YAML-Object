@@ -4,11 +4,11 @@ author:
   - 'Jan Henning Thorsen, C<< <jhthorsen at cpan.org> >>'
 build_requires:
   ExtUtils::MakeMaker: 6.42
-  Test::More: 0.9
+  Test::More: 0.92
 configure_requires:
   ExtUtils::MakeMaker: 6.42
 distribution_type: module
-generated_by: 'Module::Install version 0.92'
+generated_by: 'Module::Install version 0.95'
 license: perl
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
@@ -19,10 +19,11 @@ no_index:
     - inc
     - t
 requires:
-  Symbol: 1
-  YAML: 0.7
+  Symbol: 1.07
+  YAML: 0.71
 resources:
   bugtracker: http://rt.cpan.org/NoAuth/Bugs.html?Dist=YAML-Object
+  homepage: http://search.cpan.org/dist/YAML-Object
   license: http://dev.perl.org/licenses/
-  repository: http://github.com/jhthorsen/yaml-object
-version: 0.0401
+  repository: git://github.com/jhthorsen/yaml-object.git
+version: 0.05

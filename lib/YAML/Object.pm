@@ -6,7 +6,7 @@ YAML::Object - Use OO to point to a yaml-node
 
 =head1 VERSION
 
-0.0401
+0.05
 
 =head1 SYNOPSIS
 
@@ -68,7 +68,7 @@ use overload (
     fallback => 1,
 );
 
-our $VERSION = '0.0401';
+our $VERSION = '0.05';
 our($AUTOLOAD, $yaml_object, $get_key);
 
 =head1 EXPORTED FUNCTIONS
@@ -87,12 +87,14 @@ Returns a C<YAML::Object> object.
 =cut
 
 $yaml_object = sub {
-    my $in   = shift;
-    my $data = [undef, undef, q()];
+    my $in = shift;
+    my $opt = shift || { die => sub { die "$_[0]\n" } };
+    my $data = [undef, undef, q(), $opt];
+    my $self = bless sub { $data };
     my $yaml = q();
 
     unless(defined $in) {
-        die "yaml_object needs defined argument\n";
+        $opt->{'die'}->("yaml_object needs defined argument");
     }
 
     if(ref $in eq 'GLOB') {
@@ -110,7 +112,7 @@ $yaml_object = sub {
         $data->[0] = YAML::Load($in);
     }
 
-    return bless sub { $data };
+    return $self;
 };
 
 sub AUTOLOAD {
@@ -120,12 +122,11 @@ sub AUTOLOAD {
     return if($key eq 'DESTROY');
 
     my $data = $self->()->[0];
-    my $next = [undef, $self, $key];
+    my $opt = $self->()->[3];
+    my $next = [undef, $self, $key, $opt];
 
     unless(defined $data) {
-        die(sprintf "YAML::Object: %s->%s does not exist\n",
-            $get_key->($self), $key,
-        );
+        $opt->{'die'}->(sprintf "YAML::Object: %s->%s does not exist", $get_key->($self), $key);
     }
 
     if(ref $data eq 'HASH') {
@@ -136,7 +137,7 @@ sub AUTOLOAD {
 
         unless(length $key) {
             $key = $AUTOLOAD =~ /::(\w+)$/;
-            die "YAML::Object: '$key' is not numeric!" 
+            $opt->{'die'}->("YAML::Object: '$key' is not numeric!");
         }
 
         $next->[0] = $data->[$key];

@@ -2,7 +2,7 @@ NAME
     YAML::Object - Use OO to point to a yaml-node
 
 VERSION
-    0.0401
+    0.05
 
 SYNOPSIS
      use YAML::Object; # imports yaml_object()

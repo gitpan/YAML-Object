@@ -3,7 +3,7 @@
 use warnings;
 use strict;
 use lib qq(lib);
-use Test::More tests => 16 * 4;
+use Test::More tests => 16 * 4 + 1;
 use YAML::Object;
 
 my %args = (
@@ -61,6 +61,14 @@ for my $arg (sort keys %args) {
 
     is($cfg->foo->array_element->_4___->b, "2",
         "foo->array_element->_4->b contains '2'");
+}
+
+{
+    my $error = '';
+    my $cfg = yaml_object({}, { die => sub { $error = shift } });
+
+    eval { $cfg->foo->bar };
+    is($error, 'YAML::Object: ->foo->bar does not exist', 'custom sub stores die message');
 }
 
 __DATA__
